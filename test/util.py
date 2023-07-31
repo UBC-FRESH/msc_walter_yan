@@ -402,8 +402,8 @@ def plugin_c_curves(fm, c_curves_p, c_curves_f, pools, fluxes):
         mask = ('?', '?', dtype_key[2], '?', dtype_key[4])
         for _mask, ytype, curves in fm.yields:
             if _mask != mask: continue # we know there will be a match so this works
-            # print('found match for mask', mask)
-            print('found match for development key', dtype_key)
+            print('found match for mask', mask)
+            # print('found match for development key', dtype_key)
             pool_data = c_curves_p.loc[' '.join(dtype_key)]
             for yname in pools:
                 points = list(zip(pool_data.index.values, pool_data[yname]))
@@ -512,14 +512,23 @@ def compare_ws3_cbm(fm, cbm_output, disturbance_type_mapping, biomass_pools, dom
                                'eco_pool':pi[eco_pools].sum(axis=1),
                                'flux':fi[fluxes].sum(axis=1)}).groupby('period').sum().iloc[10::10, :].reset_index()
         df_cbm['period'] = (df_cbm['period']).astype(int)
-
+        
+    # if summary == False: # When there are individual carbon indicators
     df_ws3 = pd.DataFrame({'period':fm.periods,
-                           'biomass_pool':[sum(fm.inventory(period, pool) for pool in biomass_pools) for period in fm.periods],
-                           'dom_pool':[sum(fm.inventory(period, pool) for pool in dom_pools) for period in fm.periods],
-                           'eco_pool':[sum(fm.inventory(period, pool) for pool in eco_pools) for period in fm.periods],
-                           'flux':[sum(fm.inventory(period, flux) for flux in fluxes) for period in fm.periods]})
+                           'biomass_pool':[sum(fm.inventory(period, pool) for pool in biomass_pools+['biomass']) for period in fm.periods],
+                           'dom_pool':[sum(fm.inventory(period, pool) for pool in dom_pools+['DOM']) for period in fm.periods],
+                           'eco_pool':[sum(fm.inventory(period, pool) for pool in eco_pools+['ecosystem']) for period in fm.periods],
+                           'flux':[sum(fm.inventory(period, flux) for flux in fluxes+['all_fluxes']) for period in fm.periods]})
     #df_ws3['flux'] = pd.DataFrame(df_ws3['pool'].diff())
-                    
+        
+    # else: # When there are not individual carbon indicators
+    #     df_ws3 = pd.DataFrame({'period':fm.periods,
+    #                            'biomass_pool':[sum(fm.inventory(period, 'biomass')) for period in fm.periods],
+    #                            'dom_pool': [sum(fm.inventory(period, 'DOM')) for period in fm.periods],
+    #                            'eco_pool': [sum(fm.inventory(period, 'ecosystem')) for period in fm.periods],
+    #                            'flux': [sum(fm.inventory(period, 'all_fluxes')) for period in fm.periods]})
+    #     #df_ws3['flux'] = pd.DataFrame(df_ws3['pool'].diff())
+        
     fix, ax = plt.subplots(2, 1, figsize=(8, 10), sharex=True)
     ax[0].plot(df_cbm['period'], df_cbm['eco_pool'], label='cbm ecosystem pool')
     ax[0].plot(df_ws3['period'], df_ws3['eco_pool'], label='ws3 ecosystem pool')
