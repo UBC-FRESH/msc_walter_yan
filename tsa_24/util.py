@@ -141,6 +141,9 @@ def gen_scenario(fm, name='base', util=0.85, harvest_acode='harvest',
     if obj_mode == 'max_hv': # maximize harvest volume
         sense = ws3.opt.SENSE_MAXIMIZE 
         zexpr = vexpr
+    elif obj_mode == 'min_hv': # maximize harvest volume
+        sense = ws3.opt.SENSE_MINIMIZE 
+        zexpr = vexpr
     elif obj_mode == 'max_iv': # minimize forest inventory values
         sense = ws3.opt.SENSE_MAXIMIZE 
         zexpr = '1.'
@@ -330,6 +333,7 @@ def run_scenario(fm, scenario_name='base'):
     fm.reset()
     m = p.solve()
 
+    import gurobipy as grb
     if m.status != grb.GRB.OPTIMAL:
         print('Model not optimal.')
         sys.exit()
@@ -349,6 +353,7 @@ def run_scenario(fm, scenario_name='base'):
     # cbm_results = cbm_hardlink(fm,disturbance_type_mapping)
     
     return fig, df, p
+
 
 # def run_scenario(fm, scenario_name='base'):
 #     cflw_ha = {}
