@@ -1,7 +1,7 @@
 ##################################################################################
 # This module contain local utility function defintions that we can reuse 
 # in example notebooks to help reduce clutter.
-##################################################################################
+# #################################################################################
 
 import ws3
 import pandas as pd
@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 ##########################################################
 # Implement a priority queue heuristic harvest scheduler
-##########################################################
+# #########################################################
 
 def schedule_harvest_areacontrol(fm, period=None, acode='harvest', util=0.85, 
                                  target_masks=None, target_areas=None,
@@ -56,7 +56,7 @@ def schedule_harvest_areacontrol(fm, period=None, acode='harvest', util=0.85,
 
 ##############################################################
 # Implement an LP optimization harvest scheduler
-##############################################################
+# #############################################################
 
 def cmp_c_z(fm, path, expr):
     """
@@ -141,6 +141,9 @@ def gen_scenario(fm, name='base', util=0.85, harvest_acode='harvest',
     if obj_mode == 'max_hv': # maximize harvest volume
         sense = ws3.opt.SENSE_MAXIMIZE 
         zexpr = vexpr
+    elif obj_mode == 'min_hv': # maximize harvest volume
+        sense = ws3.opt.SENSE_MINIMIZE 
+        zexpr = vexpr
     elif obj_mode == 'max_iv': # minimize forest inventory values
         sense = ws3.opt.SENSE_MAXIMIZE 
         zexpr = '1.'
@@ -191,7 +194,7 @@ def compile_scenario(fm):
     ohv = [fm.compile_product(period, 'totvol * 0.85', acode='harvest') for period in fm.periods]
     ogs = [fm.inventory(period, 'totvol') for period in fm.periods]
     ocp = [fm.inventory(period, 'ecosystem') for period in fm.periods]
-    ocf = [fm.inventory(period, 'all_fluxes') for period in fm.periods]
+    ocf = [fm.inventory(period, 'total_emissions') for period in fm.periods]
     data = {'period':fm.periods, 
             'oha':oha, 
             'ohv':ohv, 
@@ -218,9 +221,8 @@ def plot_scenario(df):
     ax[3].set_title('Ecosystem C stock (tons)')
     ax[4].bar(df.period, df.ocf)
     ax[4].set_ylim(0, None)
-    ax[4].set_title('Total net Emission (tons)')
+    ax[4].set_title('Total Carbon Emission (tons)')
     return fig, ax
-
 
 def run_scenario(fm, scenario_name='base'):
     cflw_ha = {}
@@ -228,43 +230,114 @@ def run_scenario(fm, scenario_name='base'):
     cgen_ha = {}
     cgen_hv = {}
     cgen_gs = {}
+    cgen_cp = {}
+    cgen_cf = {}
     
     # define harvest area and harvest volume flow constraints
     cflw_ha = ({p:0.05 for p in fm.periods}, 1)
     cflw_hv = ({p:0.05 for p in fm.periods}, 1)
+    
+    in_gs = 750290200. #initial growing stock volume
+    in_cp = 1319073591.63 #initial total ecosystem carbon stock
+    in_cf = 20034534.75 #intial total ecosystem carbon emission
+    AAC = 7031963. # AAC of TSA24
 
     if scenario_name == 'base': 
         # Base scenario
-        print('running bsae scenario')
-    elif scenario_name == 'base-cgen_ha': 
-        # Base scenario, plus harvest area general constraints
-        print('running base scenario plus harvest area constraints')
-        cgen_ha = {'lb':{1:100.}, 'ub':{1:101.}}    
-    elif scenario_name == 'base-cgen_hv': 
-        # Base scenario, plus harvest volume general constraints
-        print('running base scenario plus harvest volume constraints')
-        cgen_hv = {'lb':{1:1000.}, 'ub':{1:1001.}}    
-    elif scenario_name == 'base-cgen_gs': 
-        # Base scenario, plus growing stock general constraints
-        print('running base scenario plus growing stock constraints')
-        cgen_gs = {'lb':{10:100000.}, 'ub':{10:100001.}}
+        print('running base scenario')
+        cgen_gs = {'lb':{1:0}, 'ub':{1:9999999999}} 
+        cgen_hv = {'lb':{1:0}, 'ub':{1:9999999999}}    
+    elif scenario_name == 'base_h': 
+        # Base scenario
+        print('running base scenario')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC-1}, 'ub':{1:AAC}}
+    elif scenario_name == 'base_c': 
+        # Cabron indicators constraints
+        print('running base scenario with carbon constraints')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC-1}, 'ub':{1:AAC}}   
+        cgen_cp = {'lb':{10:in_cp*0.9}, 'ub':{10:in_cp*0.9+1}} #Not less than 90% of initial total ecosystem carbon stock
+        cgen_cf = {'lb':{10:in_cf}, 'ub':{10:in_cf*1.1}} #Not more than 110% of initial total ecosystem carbon stock
+    elif scenario_name == 'reduce_10%_AAC': 
+        # Reduce 10% of harvest volume from base scenario
+        print('running base scenario reduced 10% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}}#Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*0.9-1}, 'ub':{1:AAC*0.9}}    
+    elif scenario_name == 'reduce_20%_AAC': 
+        # Reduce 20% of harvest volume from base scenario
+        print('running base scenario reduced 20% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*0.8-1}, 'ub':{1:AAC*0.8}}   
+    elif scenario_name == 'increase_10%_AAC': 
+        # Increase 10% of harvest volume from base scenario
+        print('running base scenario increased 10% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*1.1-1}, 'ub':{1:AAC*1.1}}
+    elif scenario_name == 'increase_20%_AAC': 
+        # Increase 20% of harvest volume from base scenario
+        print('running base scenario increased 20% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*1.2-1}, 'ub':{1:AAC*1.2}}
+    elif scenario_name == 'increase_50%_AAC': 
+        # Increase 20% of harvest volume from base scenario
+        print('running base scenario increased 50% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*1.5-1}, 'ub':{1:AAC*1.5}}
+    elif scenario_name == 'increase_100%_AAC': 
+        # Increase 20% of harvest volume from base scenario
+        print('running base scenario increased 100% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*1.2-1}, 'ub':{1:AAC*1.2}}
+    elif scenario_name == 'increase_500%_AAC': 
+        # Increase 20% of harvest volume from base scenario
+        print('running base scenario increased 500% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*2-1}, 'ub':{1:AAC*2}}
+    elif scenario_name == 'increase_1000%_AAC': 
+        # Increase 20% of harvest volume from base scenario
+        print('running base scenario increased 1000% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*10-1}, 'ub':{1:AAC*10}}
+    elif scenario_name == 'increase_5000%_AAC': 
+        # Increase 20% of harvest volume from base scenario
+        print('running base scenario increased 5000% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*50-1}, 'ub':{1:AAC*50}}
+    elif scenario_name == 'increase_10000%_AAC': 
+        # Increase 20% of harvest volume from base scenario
+        print('running base scenario increased 10000% of AAC')
+        cgen_gs = {'lb':{10:in_gs*0.9}, 'ub':{10:in_gs*0.9+1}} #Not less than 90% of initial growing stock
+        cgen_hv = {'lb':{1:AAC*100-1}, 'ub':{1:AAC*100}}    
     else:
         assert False # bad scenario name
-
+      
+    # p = gen_scenario(fm=fm, 
+    #                  name=scenario_name, 
+    #                  cflw_ha=cflw_ha, 
+    #                  cflw_hv=cflw_hv,
+    #                  cgen_ha=cgen_ha,
+    #                  cgen_hv=cgen_hv,
+    #                  cgen_gs=cgen_gs)
+    
     p = gen_scenario(fm=fm, 
                      name=scenario_name, 
                      cflw_ha=cflw_ha, 
                      cflw_hv=cflw_hv,
                      cgen_ha=cgen_ha,
                      cgen_hv=cgen_hv,
-                     cgen_gs=cgen_gs)
+                     cgen_gs=cgen_gs,
+                     cgen_cp=cgen_cp,
+                     cgen_cf=cgen_cf)
 
     fm.reset()
     m = p.solve()
 
+    import gurobipy as grb
     if m.status != grb.GRB.OPTIMAL:
         print('Model not optimal.')
         sys.exit()
+        
     sch = fm.compile_schedule(p)
     fm.apply_schedule(sch, 
                       force_integral_area=False, 
@@ -273,14 +346,74 @@ def run_scenario(fm, scenario_name='base'):
                       recourse_enabled=False,
                       verbose=False,
                       compile_c_ycomps=True)
+    
+    from util import compile_scenario, plot_scenario
     df = compile_scenario(fm)
     fig, ax = plot_scenario(df)
+    # cbm_results = cbm_hardlink(fm,disturbance_type_mapping)
+    
     return fig, df, p
+
+
+# def run_scenario(fm, scenario_name='base'):
+#     cflw_ha = {}
+#     cflw_hv = {}
+#     cgen_ha = {}
+#     cgen_hv = {}
+#     cgen_gs = {}
+    
+#     # define harvest area and harvest volume flow constraints
+#     cflw_ha = ({p:0.05 for p in fm.periods}, 1)
+#     cflw_hv = ({p:0.05 for p in fm.periods}, 1)
+
+#     if scenario_name == 'base': 
+#         # Base scenario
+#         print('running bsae scenario')
+#     elif scenario_name == 'base-cgen_ha': 
+#         # Base scenario, plus harvest area general constraints
+#         print('running base scenario plus harvest area constraints')
+#         cgen_ha = {'lb':{1:100.}, 'ub':{1:101.}}    
+#     elif scenario_name == 'base-cgen_hv': 
+#         # Base scenario, plus harvest volume general constraints
+#         print('running base scenario plus harvest volume constraints')
+#         cgen_hv = {'lb':{1:1000.}, 'ub':{1:1001.}}    
+#     elif scenario_name == 'base-cgen_gs': 
+#         # Base scenario, plus growing stock general constraints
+#         print('running base scenario plus growing stock constraints')
+#         cgen_gs = {'lb':{10:100000.}, 'ub':{10:100001.}}
+#     else:
+#         assert False # bad scenario name
+
+#     p = gen_scenario(fm=fm, 
+#                      name=scenario_name, 
+#                      cflw_ha=cflw_ha, 
+#                      cflw_hv=cflw_hv,
+#                      cgen_ha=cgen_ha,
+#                      cgen_hv=cgen_hv,
+#                      cgen_gs=cgen_gs)
+
+#     fm.reset()
+#     m = p.solve()
+
+#     if m.status != grb.GRB.OPTIMAL:
+#         print('Model not optimal.')
+#         sys.exit()
+#     sch = fm.compile_schedule(p)
+#     fm.apply_schedule(sch, 
+#                       force_integral_area=False, 
+#                       override_operability=False,
+#                       fuzzy_age=False,
+#                       recourse_enabled=False,
+#                       verbose=False,
+#                       compile_c_ycomps=True)
+#     df = compile_scenario(fm)
+#     fig, ax = plot_scenario(df)
+#     return fig, df, p
 
 
 ##############################################################
 # Implement simple functions to run CBM from ws3 export data and output resutls
-##############################################################
+# #############################################################
 def run_cbm(sit_config, sit_tables, n_steps):
     from libcbm.input.sit import sit_reader
     from libcbm.input.sit import sit_cbm_factory 
@@ -329,13 +462,24 @@ def cbm_report(fm, cbm_output, biomass_pools, dom_pools, fluxes):
     pi = cbm_output.classifiers.to_pandas().merge(cbm_output.pools.to_pandas(), 
                                                   left_on=["identifier", "timestep"], 
                                                   right_on=["identifier", "timestep"])
-    biomass_result = pi[['timestep']+biomass_pools]
-    dom_result = pi[['timestep']+dom_pools]
-    total_eco_result = pi[['timestep']+biomass_pools+dom_pools]
+    # biomass_result = pi[['timestep']+biomass_pools]
+    # dom_result = pi[['timestep']+dom_pools]
+    # total_eco_result = pi[['timestep']+biomass_pools+dom_pools]
     annual_carbon_stocks = pd.DataFrame({'Year':pi['timestep'],
                                          'Biomass':pi[biomass_pools].sum(axis=1),
                                          'DOM':pi[dom_pools].sum(axis=1),
-                                         'Total Ecosystem': pi[biomass_pools+dom_pools].sum(axis=1)})
+                                         'Total_Ecosystem': pi[biomass_pools+dom_pools].sum(axis=1)})
+    # print(pi[biomass_pools+dom_pools].sum(axis=1).diff())
+    # print(pi[['Products']].sum(axis=1).diff())
+    # print(pi[biomass_pools+dom_pools].sum(axis=1).diff()-pi[['Products']].sum(axis=1).diff())
+
+    annual_net_fluxes = annual_carbon_stocks[['Year','Total_Ecosystem']].copy()
+    annual_net_fluxes['Net_Fluxes'] = annual_net_fluxes['Total_Ecosystem'].diff()
+    annual_net_fluxes = annual_net_fluxes[['Year','Net_Fluxes']]
+    annual_net_fluxes.loc[annual_net_fluxes['Year'] == 0, 'Net_Fluxes'] = 0
+ 
+    # annual_CO2_emissions = pd.DataFrame({'Year':fi['timestep'],
+    #                                      'Emissions':pi['CO2'].sum(axis=1)})
     
     #annual_carbon_stockchanges = annual_carbon_stocks.diff()
     
@@ -344,16 +488,19 @@ def cbm_report(fm, cbm_output, biomass_pools, dom_pools, fluxes):
                                                   left_on=["identifier", "timestep"], 
                                                   right_on=["identifier", "timestep"])
     
-    annual_all_fluxes = pd.DataFrame({'Year':fi['timestep'],
-                                      'Emissions':fi[fluxes].sum(axis=1)})
+    annual_all_emissions = pd.DataFrame({'Year':fi['timestep'],
+                                         'All_Emissions':fi[fluxes].sum(axis=1)})
+     
+    
     n_steps = fm.horizon * fm.period_length
     annual_carbon_stocks.groupby('Year').sum().plot(figsize=(5,5),xlim=(0,n_steps),ylim=(None,None),title="Annual Ecosystem Carbon Stocks")
-    annual_all_fluxes.groupby('Year').sum().plot(figsize=(5,5),xlim=(0,n_steps),ylim=(None,None),title="Annual Ecosystem Carbon Emission")
+    annual_all_emissions.groupby('Year').sum().plot(figsize=(5,5),xlim=(0,n_steps),ylim=(None,None),title="Annual Ecosystem Carbon Emissions")
+    annual_net_fluxes.groupby('Year').sum().plot(figsize=(5,5),xlim=(0,n_steps),ylim=(None,None),title="Annual Ecosystem Net Fluxes")
     #annual_carbon_stockchanges.plot(figsize=(5,5),xlim=(0,n_steps),ylim=(None,None),title="Annual EcosystemCarbon Stock Changes")
 
 ##############################################################
 # Implement simple functions to generate, plug-in, and fix carbon yield curves into ws3 models
-##############################################################
+# #############################################################
 
 def generate_c_curves(fm, disturbance_type_mapping, pools, fluxes):
     for dtype_key in fm.dtypes:
@@ -491,9 +638,10 @@ def compare_ws3_cbm(fm, cbm_output, disturbance_type_mapping, biomass_pools, dom
     fi = cbm_output.classifiers.to_pandas().merge(cbm_output.flux.to_pandas(), 
                                                   left_on=["identifier", "timestep"], 
                                                   right_on=["identifier", "timestep"])
-    df_cbm = pd.DataFrame({'period':pi["timestep"] * 0.1, 
-                           'eco_pool':pi[eco_pools].sum(axis=1)}).groupby('period').sum().iloc[10::10, :].reset_index()
-    df_cbm['period'] = (df_cbm['period'] - 0.1 + 1.0).astype(int)
+    
+    # df_cbm = pd.DataFrame({'period':pi["timestep"] * 0.1, 
+    #                        'eco_pool':pi[eco_pools].sum(axis=1)}).groupby('period').sum().iloc[10::10, :].reset_index()
+    # df_cbm['period'] = (df_cbm['period'] - 0.1 + 1.0).astype(int)
     #df_cbm['flux'] = pd.DataFrame(df_cbm['pool'].diff())
     
     #df_cbm['flux'] = df_cbm['pool'].diff()
@@ -503,23 +651,40 @@ def compare_ws3_cbm(fm, cbm_output, disturbance_type_mapping, biomass_pools, dom
                                'biomass_pool':pi[biomass_pools].sum(axis=1),
                                'dom_pool':pi[dom_pools].sum(axis=1),
                                'eco_pool':pi[eco_pools].sum(axis=1),
-                               'flux':fi[fluxes].sum(axis=1)}).groupby('period').sum().iloc[1::10, :].reset_index()
+                               'net_fluxes':pi[biomass_pools+dom_pools].sum(axis=1).diff(),
+                               'total_emissions':fi[fluxes].sum(axis=1)}).groupby('period').sum().iloc[1::10, :].reset_index()
         df_cbm['period'] = (df_cbm['period'] - 0.1 + 1.0).astype(int)
     else:
         df_cbm = pd.DataFrame({'period':pi["timestep"] * 0.1, 
                                'biomass_pool':pi[biomass_pools].sum(axis=1),
                                'dom_pool':pi[dom_pools].sum(axis=1),
                                'eco_pool':pi[eco_pools].sum(axis=1),
-                               'flux':fi[fluxes].sum(axis=1)}).groupby('period').sum().iloc[10::10, :].reset_index()
+                               'total_emissions':fi[fluxes].sum(axis=1)}).groupby('period').sum().iloc[10::10, :].reset_index()
         df_cbm['period'] = (df_cbm['period']).astype(int)
+        
+    df_cbm['net_fluxes']=df_cbm['eco_pool'].diff()
+    df_cbm.at[0,'net_fluxes'] = 0.0
+        # df_product= pd.DataFrame({'period':pi["timestep"] * 0.1,
+        #                           'Products':pi[['Products']].sum(axis=1),
+        #                           'Products_fluxes':pi[['Products']].diff().sum(axis=1)}).groupby('period').sum().iloc[10::10, :].reset_index()
+        # df_product.at[0, 'product_fluxes'] =0.0
+    
+        # return df_product
+    
         
     # if summary == False: # When there are individual carbon indicators
     df_ws3 = pd.DataFrame({'period':fm.periods,
-                           'biomass_pool':[sum(fm.inventory(period, pool) for pool in biomass_pools+['biomass']) for period in fm.periods],
-                           'dom_pool':[sum(fm.inventory(period, pool) for pool in dom_pools+['DOM']) for period in fm.periods],
-                           'eco_pool':[sum(fm.inventory(period, pool) for pool in eco_pools+['ecosystem']) for period in fm.periods],
-                           'flux':[sum(fm.inventory(period, flux) for flux in fluxes+['all_fluxes']) for period in fm.periods]})
-    #df_ws3['flux'] = pd.DataFrame(df_ws3['pool'].diff())
+                           'biomass_pool':[sum(fm.inventory(period, pool) for pool in ['biomass']) for period in fm.periods],
+                           'dom_pool':[sum(fm.inventory(period, pool) for pool in ['DOM']) for period in fm.periods],
+                           'eco_pool':[sum(fm.inventory(period, pool) for pool in ['ecosystem']) for period in fm.periods],
+                           # 'CO2':[sum(fm.inventory(period, pool) for pool in ['CO2']) for period in fm.periods],
+                           'net_fluxes':[sum(fm.inventory(period, flux) for flux in ['net_fluxes']) for period in fm.periods],
+                           'total_emissions':[sum(fm.inventory(period, flux) for flux in ['total_emissions']) for period in fm.periods]})
+
+    df_ws3['net_fluxes']=df_ws3['eco_pool'].diff()
+    df_ws3.at[0,'net_fluxes'] = 0.
+    
+    # df_ws3['flux'] = pd.DataFrame(df_ws3['pool'].diff())
         
     # else: # When there are not individual carbon indicators
     #     df_ws3 = pd.DataFrame({'period':fm.periods,
@@ -529,7 +694,7 @@ def compare_ws3_cbm(fm, cbm_output, disturbance_type_mapping, biomass_pools, dom
     #                            'flux': [sum(fm.inventory(period, 'all_fluxes')) for period in fm.periods]})
     #     #df_ws3['flux'] = pd.DataFrame(df_ws3['pool'].diff())
         
-    fix, ax = plt.subplots(2, 1, figsize=(8, 10), sharex=True)
+    fix, ax = plt.subplots(3, 1, figsize=(10, 10), sharex=True)
     ax[0].plot(df_cbm['period'], df_cbm['eco_pool'], label='cbm ecosystem pool')
     ax[0].plot(df_ws3['period'], df_ws3['eco_pool'], label='ws3 ecosystem pool')
     ax[0].plot(df_cbm['period'], df_cbm['biomass_pool'], label='cbm biomass pool')
@@ -538,12 +703,18 @@ def compare_ws3_cbm(fm, cbm_output, disturbance_type_mapping, biomass_pools, dom
     ax[0].plot(df_ws3['period'], df_ws3['dom_pool'], label='ws3 DOM pool')
     ax[0].plot(df_cbm['period'], df_cbm['eco_pool'], label='cbm pool')
     ax[0].plot(df_ws3['period'], df_ws3['eco_pool'], label='ws3 pool')
-    ax[1].plot(df_cbm['period'], df_cbm['flux'], label='cbm flux')
-    ax[1].plot(df_ws3['period'], df_ws3['flux'], label='ws3 flux')
+    # ax[0].plot(df_cbm['period'], df_cbm['CO2'], label='cbm CO2 pool')
+    # ax[0].plot(df_ws3['period'], df_ws3['CO2'], label='ws3 CO2 pool')
+    ax[1].plot(df_cbm['period'], df_cbm['total_emissions'], label='cbm total fluxes')
+    ax[1].plot(df_ws3['period'], df_ws3['total_emissions'], label='ws3 total fluxes')
+    ax[2].plot(df_cbm['period'], df_cbm['net_fluxes'], label='cbm net flux')
+    ax[2].plot(df_ws3['period'], df_ws3['net_fluxes'], label='ws3 net flux')
     ax[0].legend()
     ax[1].legend()
+    ax[2].legend()
     ax[0].set_ylim(None, None)
     ax[1].set_ylim(None, None)
+    ax[2].set_ylim(None, None)
     return df_ws3, df_cbm
 
 def complie_events(self, softwood_volume_yname, hardwood_volume_yname, n_yield_vals):
