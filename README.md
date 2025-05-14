@@ -1,4 +1,4 @@
-# BC Forest Sector Climate Mitigation Modeling Framework
+# BC Forest Sector Climate Benefits Modeling Framework
 
 This repository contains the mathematical modeling framework developed to simulate and optimize the climate change mitigation potential of the British Columbia (BC) forest sector, encompassing both the forest ecosystem and the harvested wood products (HWP) industry.
 
