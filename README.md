@@ -2,28 +2,18 @@
 
 This repository contains the mathematical modeling framework developed to simulate and optimize the climate change mitigation potential of the British Columbia (BC) forest sector, encompassing both the forest ecosystem and the harvested wood products (HWP) industry.
 
-
 ---
 
 ## Overview
 
-The framework combines the [libcbm_py](https://github.com/cat-cfs/libcbm_py) library with a custom [ws3](#) wrapper to:
+The framework integrates [libcbm_py](https://github.com/cat-cfs/libcbm_py) with [ws3](#)  to:
 
-1. Generate and validate carbon yield curves at stand and regional scales.
-2. Optimize harvest and HWP scenarios to minimize net carbon emissions.
-3. Perform sensitivity analyses on key HWP parameters.
+1. Generate, plug-in, validate carbon yield curve method at stand and lanscape levels.
+2. Compare and find optimize harvest and HWP scenario to maximize the total carbon stock and minimize net carbon emissions from the forest system.
+3. Perform sensitivity analyses on the impact of key HWP climate parameters on the optimal forest carbon management plans.
 
 All analyses are implemented in Jupyter notebooks for reproducibility and extension.
 
----
-
-## Features
-
-- **Single-Stand Modeling**: Generate, plug in, and validate site-specific carbon yield curves.
-- **Regional Modeling**: Scale yield-curve workflows to the full TSA 24 region.
-- **Emissions Optimization**: Loop over HWP half-lives and displacement factors to minimize net emissions.
-- **Sensitivity Analysis**: Explore how HWP half-life, utilization rate, and displacement factor affect mitigation potential.
-- **Modular Utilities**: `util.py` hosts reusable functions for scheduling, coefficient compilation, CBM execution, plotting, and scenario management.
 
 ---
 
@@ -31,14 +21,14 @@ All analyses are implemented in Jupyter notebooks for reproducibility and extens
 
 ```text
 ├── data/
-│   ├── woodstock_model_files_test     # SIT and ws3 export for single-stand test
-│   └── woodstock_model_files_tsa24    # SIT and ws3 export for TSA 24 region
+│   ├── woodstock_model_files_test     # Files to build singe-stand test ws3 model
+│   └── woodstock_model_files_tsa24    # Files to build TSA 24 ws3 model
 ├── libcbm_py/                         # Local clone of the libcbm_py library
-├── ws3/                               # Wrapper modules for ws3 integration
-├── generate_c_curves_single_stand.ipynb  # Single-stand carbon curve workflow
-├── generate_c_curves_tsa24.ipynb         # TSA 24 regional carbon curve workflow
-├── minimize_emission_loop.ipynb          # HWP scenario optimization
-├── sensitivity_analysis.ipynb            # Multi-parameter sensitivity analysis
+├── ws3/                               # Local clone of the ws3 library
+├── generate_c_curves_single_stand.ipynb  # Single-stand carbon yield curve generation, plug-in, and validation workflow
+├── generate_c_curves_tsa24.ipynb         # TSA 24 lanscape carbon curve generation, plug-in, and validation workflow
+├── minimize_emission_loop.ipynb          # Loop to model each minimize-system-emission scenario with increasing HWP half-life
+├── sensitivity_analysis.ipynb            # Analyze the sensitivity of optimal modelling solution to HWP half-life and displacement factor
 ├── util.py                            # Utility functions used by all notebooks
 ├── LICENSE                            # MIT License
 └── README.md                          # This file
