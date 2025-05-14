@@ -2,19 +2,6 @@
 
 This repository contains the mathematical modeling framework developed to simulate and optimize the climate change mitigation potential of the British Columbia (BC) forest sector, encompassing both the forest ecosystem and the harvested wood products (HWP) industry.
 
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Features](#features)
-- [Repository Structure](#repository-structure)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Data](#data)
-- [Utilities](#utilities)
-- [License](#license)
-- [Contact](#contact)
 
 ---
 
