@@ -26,8 +26,8 @@ All analyses are implemented in Jupyter notebooks for reproducibility and extens
 ├── libcbm_py/                         # Local clone of the libcbm_py library
 ├── ws3/                               # Local clone of the ws3 library
 ├── generate_c_curves_single_stand.ipynb  # Single-stand carbon yield curve generation, plug-in, and validation workflow
-├── generate_c_curves_tsa24.ipynb         # TSA 24 lanscape carbon curve generation, plug-in, and validation workflow
-├── minimize_emission_loop.ipynb          # Loop to model each minimize-system-emission scenario with increasing HWP half-life
+├── generate_c_curves_tsa24.ipynb         # TSA 24 lanscape carbon yield curve generation, plug-in, and validation workflow
+├── minimize_emission_loop.ipynb          # Loop to model each minimize-system-emission scenario with increasing HWP half-life and displacement factor
 ├── sensitivity_analysis.ipynb            # Analyze the sensitivity of optimal modelling solution to HWP half-life and displacement factor
 ├── util.py                            # Utility functions used by all notebooks
 ├── LICENSE                            # MIT License
