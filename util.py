@@ -168,10 +168,10 @@ def plot_scenario(df):
 # Implement simple functions to run CBM from ws3 export data and output resutls
 # #############################################################
 def run_cbm(sit_config, sit_tables, n_steps):
+    import inspect
     from libcbm.input.sit import sit_reader
     from libcbm.input.sit import sit_cbm_factory 
     from libcbm.model.cbm.cbm_output import CBMOutput
-    from libcbm.storage.backends import BackendType
     from libcbm.model.cbm import cbm_simulator
     sit_data = sit_reader.parse(sit_classifiers=sit_tables['sit_classifiers'],
                                 sit_disturbance_types=sit_tables['sit_disturbance_types'],
@@ -189,13 +189,17 @@ def run_cbm(sit_config, sit_tables, n_steps):
         # Create a function to apply rule based disturbance events and transition rules based on the SIT input
         rule_based_processor = sit_cbm_factory.create_sit_rule_based_processor(sit, cbm)
         # The following line of code spins up the CBM inventory and runs it through 200 timesteps.
-        cbm_simulator.simulate(cbm,
-                               n_steps=n_steps,
-                               classifiers=classifiers,
-                               inventory=inventory,
-                               pre_dynamics_func=rule_based_processor.pre_dynamics_func,
-                               reporting_func=cbm_output.append_simulation_result,
-                               backend_type=BackendType.numpy)      
+        simulate_kwargs = {
+            "n_steps": n_steps,
+            "classifiers": classifiers,
+            "inventory": inventory,
+            "pre_dynamics_func": rule_based_processor.pre_dynamics_func,
+            "reporting_func": cbm_output.append_simulation_result,
+        }
+        if "backend_type" in inspect.signature(cbm_simulator.simulate).parameters:
+            from libcbm.storage.backends import BackendType
+            simulate_kwargs["backend_type"] = BackendType.numpy
+        cbm_simulator.simulate(cbm, **simulate_kwargs)
     return cbm_output
 
 
