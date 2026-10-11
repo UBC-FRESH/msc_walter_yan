@@ -1,0 +1,40 @@
+# Direct dependencies, pinned to the validated environment (2026-10-11).
+# For the full environment freeze, see requirements-freeze.txt.
+#
+# Model libraries: install the pinned submodules (recommended):
+#     pip install ./ws3 ./libcbm_py
+# or from PyPI:
+#     pip install ws3==1.0.5 libcbm==2.10.2
+#
+# ws3's own runtime dependencies (numpy, pandas, scipy, matplotlib, rasterio,
+# fiona, profilehooks, dill, highspy, pyyaml) and libcbm's (numexpr, numba,
+# mock, openpyxl) are pinned below.
+
+# --- Core ---
+numpy==2.5.4
+pandas==3.0.6
+scipy==1.18.1
+matplotlib==3.11.2
+
+# --- libcbm stack ---
+numba==0.68.0
+numexpr==2.14.2
+mock==5.2.0
+openpyxl==3.1.5
+
+# --- ws3 stack ---
+rasterio==1.5.2
+fiona==1.10.1
+profilehooks==1.13.0
+dill==0.4.1
+highspy==1.15.1
+pyyaml==6.0.3
+
+# --- Notebooks ---
+geopandas==1.2.0
+
+# --- Solvers (optional; ws3 extras) ---
+# HiGHS (open source) is ws3's default solver; Gurobi is used by the notebooks.
+highspy==1.15.1
+gurobipy==13.0.3
+pulp==4.0.0
