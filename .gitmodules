@@ -1,0 +1,6 @@
+[submodule "ws3"]
+	path = ws3
+	url = https://github.com/UBC-FRESH/ws3.git
+[submodule "libcbm_py"]
+	path = libcbm_py
+	url = https://github.com/cat-cfs/libcbm_py.git
